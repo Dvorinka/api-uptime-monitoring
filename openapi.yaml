@@ -1,0 +1,562 @@
+openapi: 3.0.3
+info:
+  title: Uptime Monitoring API
+  description: API for monitoring website uptime and performance
+  version: 1.0.0
+  contact:
+    name: API Services
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+
+paths:
+  /healthz:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the service
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /v1/uptime/summary:
+    get:
+      summary: Get monitoring summary
+      description: Get a summary of all monitors and their status
+      tags:
+        - Monitoring
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Successful summary response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Summary'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '405':
+          description: Method not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/uptime/monitors:
+    get:
+      summary: List all monitors
+      description: Get a list of all configured monitors
+      tags:
+        - Monitors
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Successful list response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Monitor'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create monitor
+      description: Create a new uptime monitor
+      tags:
+        - Monitors
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMonitorRequest'
+      responses:
+        '201':
+          description: Monitor created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Monitor'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/uptime/monitors/{monitorId}:
+    get:
+      summary: Get monitor
+      description: Get details of a specific monitor
+      tags:
+        - Monitors
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: monitorId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Monitor ID
+          example: "monitor-123"
+      responses:
+        '200':
+          description: Successful monitor response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Monitor'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Monitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete monitor
+      description: Delete a specific monitor
+      tags:
+        - Monitors
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: monitorId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Monitor ID
+          example: "monitor-123"
+      responses:
+        '200':
+          description: Monitor deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      deleted:
+                        type: boolean
+                        example: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Monitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/uptime/monitors/{monitorId}/check:
+    post:
+      summary: Run monitor check
+      description: Manually trigger a check for a specific monitor
+      tags:
+        - Monitors
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: monitorId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Monitor ID
+          example: "monitor-123"
+      responses:
+        '200':
+          description: Check completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CheckResult'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Monitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/uptime/monitors/{monitorId}/results:
+    get:
+      summary: Get monitor results
+      description: Get recent check results for a specific monitor
+      tags:
+        - Monitors
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: monitorId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Monitor ID
+          example: "monitor-123"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Maximum number of results to return
+          example: 100
+      responses:
+        '200':
+          description: Successful results response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CheckResult'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Monitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/uptime/checks/run:
+    post:
+      summary: Run checks
+      description: Manually trigger monitoring checks for all or due monitors
+      tags:
+        - Monitoring
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: mode
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [due, all]
+            default: due
+          description: Which monitors to check
+          example: "due"
+      responses:
+        '200':
+          description: Checks completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      mode:
+                        type: string
+                        example: "due"
+                      executed_monitors:
+                        type: integer
+                        example: 5
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Monitor:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Monitor unique identifier
+          example: "monitor-123"
+        name:
+          type: string
+          description: Monitor name
+          example: "Main Website"
+        type:
+          type: string
+          enum: [http, ping]
+          description: Monitor type
+          example: "http"
+        target:
+          type: string
+          description: Target URL or host to monitor
+          example: "https://example.com"
+        interval_seconds:
+          type: integer
+          description: Check interval in seconds
+          example: 300
+        timeout_seconds:
+          type: integer
+          description: Check timeout in seconds
+          example: 10
+        expected_status:
+          type: integer
+          description: Expected HTTP status code (for HTTP monitors)
+          example: 200
+        webhook_url:
+          type: string
+          description: Webhook URL for notifications
+          example: "https://hooks.slack.com/..."
+        check_ssl:
+          type: boolean
+          description: Whether to check SSL certificate
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          description: Monitor creation time
+          example: "2023-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update time
+          example: "2023-01-01T00:00:00Z"
+        last_check_at:
+          type: string
+          format: date-time
+          description: Last check time
+          example: "2023-01-01T12:00:00Z"
+        last_status:
+          type: string
+          enum: [unknown, up, down]
+          description: Last check status
+          example: "up"
+        last_error:
+          type: string
+          description: Last error message
+          example: "timeout"
+        last_response_ms:
+          type: integer
+          format: int64
+          description: Last response time in milliseconds
+          example: 250
+        last_http_status:
+          type: integer
+          description: Last HTTP status code
+          example: 200
+        last_ssl_expires:
+          type: string
+          format: date-time
+          description: SSL certificate expiry date
+          example: "2024-01-01T00:00:00Z"
+
+    CreateMonitorRequest:
+      type: object
+      required:
+        - name
+        - type
+        - target
+        - interval_seconds
+        - timeout_seconds
+      properties:
+        name:
+          type: string
+          description: Monitor name
+          example: "Main Website"
+        type:
+          type: string
+          enum: [http, ping]
+          description: Monitor type
+          example: "http"
+        target:
+          type: string
+          description: Target URL or host to monitor
+          example: "https://example.com"
+        interval_seconds:
+          type: integer
+          minimum: 10
+          description: Check interval in seconds
+          example: 300
+        timeout_seconds:
+          type: integer
+          minimum: 1
+          description: Check timeout in seconds
+          example: 10
+        expected_status:
+          type: integer
+          description: Expected HTTP status code (for HTTP monitors)
+          example: 200
+        webhook_url:
+          type: string
+          description: Webhook URL for notifications
+          example: "https://hooks.slack.com/..."
+        check_ssl:
+          type: boolean
+          description: Whether to check SSL certificate
+          example: true
+
+    CheckResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Check result ID
+          example: "check-456"
+        monitor_id:
+          type: string
+          description: Associated monitor ID
+          example: "monitor-123"
+        status:
+          type: string
+          enum: [unknown, up, down]
+          description: Check status
+          example: "up"
+        http_status:
+          type: integer
+          description: HTTP status code (for HTTP monitors)
+          example: 200
+        response_ms:
+          type: integer
+          format: int64
+          description: Response time in milliseconds
+          example: 250
+        checked_at:
+          type: string
+          format: date-time
+          description: Check timestamp
+          example: "2023-01-01T12:00:00Z"
+        error:
+          type: string
+          description: Error message if check failed
+          example: "timeout"
+        ssl_expires:
+          type: string
+          format: date-time
+          description: SSL certificate expiry date
+          example: "2024-01-01T00:00:00Z"
+
+    Summary:
+      type: object
+      properties:
+        total_monitors:
+          type: integer
+          description: Total number of monitors
+          example: 10
+        unknown_monitors:
+          type: integer
+          description: Number of monitors with unknown status
+          example: 1
+        up_monitors:
+          type: integer
+          description: Number of monitors that are up
+          example: 8
+        down_monitors:
+          type: integer
+          description: Number of monitors that are down
+          example: 1
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "monitor not found"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: API key for authentication (format: "Bearer YOUR_API_KEY")
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Monitoring
+    description: Monitoring operations
+  - name: Monitors
+    description: Monitor management
