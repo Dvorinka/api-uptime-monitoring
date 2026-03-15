@@ -1,4 +1,4 @@
-module uptime-monitoring
+module apiservices/uptime-monitoring
 
 go 1.25.7
 
