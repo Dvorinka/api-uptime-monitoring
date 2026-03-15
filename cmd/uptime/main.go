@@ -18,7 +18,7 @@ import (
 func main() {
 	logger := log.New(os.Stdout, "[uptime] ", log.LstdFlags)
 
-	port := envString("PORT", "8080")
+	port := envString("PORT", "30017")
 	apiKey := envString("UPTIME_API_KEY", "dev-uptime-key")
 	if apiKey == "dev-uptime-key" {
 		logger.Println("UPTIME_API_KEY not set, using default development key")
